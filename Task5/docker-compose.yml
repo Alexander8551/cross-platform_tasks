@@ -1,0 +1,41 @@
+# docker-compose поднимает сразу два контейнера:
+# 1) db  - база данных PostgreSQL
+# 2) app - Java-приложение (Spring Boot), которое выполняет CRUD-операции над таблицей
+# Контейнеры находятся в одной сети по умолчанию и обращаются друг к другу по имени сервиса.
+name: Task5
+
+services:
+
+  db:
+    image: postgres:16
+    container_name: coffee-db
+    environment:
+      POSTGRES_DB: coffeedb
+      POSTGRES_USER: coffee
+      POSTGRES_PASSWORD: coffee
+    # Том, чтобы данные БД сохранялись между перезапусками контейнера.
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # Проброс порта на хост (можно подключиться через psql на localhost:5432).
+    ports:
+      - "5432:5432"
+
+  app:
+    # Собираем образ из Dockerfile в текущей директории.
+    build: .
+    container_name: coffee-app
+    # Передаём приложению параметры подключения к БД через переменные окружения.
+    # Хост "db" - это имя сервиса БД выше, docker сам резолвит его в IP контейнера.
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/coffeedb
+      SPRING_DATASOURCE_USERNAME: coffee
+      SPRING_DATASOURCE_PASSWORD: coffee
+    ports:
+      - "8080:8080"
+    # Запускаем приложение только после старта БД.
+    depends_on:
+      - db
+
+# Именованный том для данных PostgreSQL.
+volumes:
+  db-data:
